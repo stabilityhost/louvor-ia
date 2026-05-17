@@ -5,127 +5,150 @@ import { Mic, RefreshCw, Info, CheckCircle2, Music, Shuffle, Anchor } from "luci
 import { audioEngineInstance, PitchData, NOTE_STRINGS } from "@/lib/audioEngine";
 import { musicAIInstance, Scale } from "@/lib/musicAI";
 
-// Nome das notas em português para o usuário
-const PT_NOTES: { [key: string]: string } = {
-  "C": "Dó", "C#": "Dó#", "D": "Ré", "D#": "Ré#", "E": "Mi", "F": "Fá",
-  "F#": "Fá#", "G": "Sol", "G#": "Sol#", "A": "Lá", "A#": "Lá#", "B": "Si", "-": "-"
-};
+interface CadenceOption {
+  title: string;
+  chords: string[];
+}
 
 interface KeyProgression {
   standard: string[];
   inverted: string[];
-  cadences: { title: string; chords: string[] }[];
+  cadences: CadenceOption[];
 }
 
-// Banco de dados musical das progressões de adoração modernas em Cifras
+// Banco de dados musical das progressões de adoração modernas em CIFRA PURA
 const WORSHIP_PROGRESSIONS: { [key: string]: KeyProgression } = {
   // Tons Maiores
   "C": {
     standard: ["C2", "G2", "Am7", "F"],
     inverted: ["F", "G2", "Am7", "Em7"],
     cadences: [
-      { title: "Cadência Autêntica (V ➔ I)", chords: ["Dm7", "G7", "C2"] },
-      { title: "Cadência Plagal (IV ➔ I)", chords: ["F", "Fm6", "C2"] },
-      { title: "Cadência Suspensa", chords: ["F", "Gsus4", "C2"] }
+      { title: "ii ➔ V ➔ I (Padrão Jazz/Pop)", chords: ["Dm7", "G7", "C2"] },
+      { title: "IV ➔ iv ➔ I (Plagal Menor Emocional)", chords: ["F", "Fm", "C2"] },
+      { title: "bVI ➔ bVII ➔ I (Épica / Lady Gaga)", chords: ["Ab", "Bb", "C2"] },
+      { title: "IV/V ➔ V7 ➔ I (Gospel / Soul)", chords: ["F/G", "G7", "C2"] },
+      { title: "bVII ➔ IV ➔ I (Backdoor / Rock)", chords: ["Bb", "F", "C2"] }
     ]
   },
   "C#": {
     standard: ["C#2", "G#2", "A#m7", "F#"],
     inverted: ["F#", "G#2", "A#m7", "Fm7"],
     cadences: [
-      { title: "Cadência Autêntica (V ➔ I)", chords: ["D#m7", "G#7", "C#2"] },
-      { title: "Cadência Plagal (IV ➔ I)", chords: ["F#", "F#m6", "C#2"] },
-      { title: "Cadência Suspensa", chords: ["F#", "G#sus4", "C#2"] }
+      { title: "ii ➔ V ➔ I (Padrão)", chords: ["D#m7", "G#7", "C#2"] },
+      { title: "IV ➔ iv ➔ I (Plagal Menor)", chords: ["F#", "F#m", "C#2"] },
+      { title: "bVI ➔ bVII ➔ I (Épica)", chords: ["A", "B", "C#2"] },
+      { title: "IV/V ➔ V7 ➔ I (Gospel)", chords: ["F#/G#", "G#7", "C#2"] },
+      { title: "bVII ➔ IV ➔ I (Backdoor)", chords: ["B", "F#", "C#2"] }
     ]
   },
   "D": {
     standard: ["D2", "A2", "Bm7", "G"],
     inverted: ["G", "A2", "Bm7", "F#m7"], // BATE 100% COM OS SEUS DOIS PRINTS!
     cadences: [
-      { title: "Cadência Autêntica (V ➔ I)", chords: ["Em7", "A7", "D2"] },
-      { title: "Cadência Plagal (IV ➔ I)", chords: ["G", "Gm6", "D2"] },
-      { title: "Cadência Suspensa", chords: ["G", "Asus4", "D2"] }
+      { title: "ii ➔ V ➔ I (Padrão Jazz/Pop)", chords: ["Em7", "A7", "D2"] },
+      { title: "IV ➔ iv ➔ I (Plagal Menor Emocional)", chords: ["G", "Gm", "D2"] },
+      { title: "bVI ➔ bVII ➔ I (Épica / Lady Gaga)", chords: ["Bb", "C", "D2"] },
+      { title: "IV/V ➔ V7 ➔ I (Gospel / Soul)", chords: ["G/A", "A7", "D2"] },
+      { title: "bVII ➔ IV ➔ I (Backdoor / Rock)", chords: ["C", "G", "D2"] }
     ]
   },
   "D#": {
     standard: ["D#2", "A#2", "Cm7", "G#"],
     inverted: ["G#", "A#2", "Cm7", "Gm7"],
     cadences: [
-      { title: "Cadência Autêntica (V ➔ I)", chords: ["Fm7", "A#7", "D#2"] },
-      { title: "Cadência Plagal (IV ➔ I)", chords: ["G#", "G#m6", "D#2"] },
-      { title: "Cadência Suspensa", chords: ["G#", "A#sus4", "D#2"] }
+      { title: "ii ➔ V ➔ I (Padrão)", chords: ["Fm7", "A#7", "D#2"] },
+      { title: "IV ➔ iv ➔ I (Plagal Menor)", chords: ["G#", "G#m", "D#2"] },
+      { title: "bVI ➔ bVII ➔ I (Épica)", chords: ["B", "C#", "D#2"] },
+      { title: "IV/V ➔ V7 ➔ I (Gospel)", chords: ["G#/A#", "A#7", "D#2"] },
+      { title: "bVII ➔ IV ➔ I (Backdoor)", chords: ["C#", "G#", "D#2"] }
     ]
   },
   "E": {
     standard: ["E2", "B2", "C#m7", "A"],
     inverted: ["A", "B2", "C#m7", "G#m7"],
     cadences: [
-      { title: "Cadência Autêntica (V ➔ I)", chords: ["F#m7", "B7", "E2"] },
-      { title: "Cadência Plagal (IV ➔ I)", chords: ["A", "Am6", "E2"] },
-      { title: "Cadência Suspensa", chords: ["A", "Bsus4", "E2"] }
+      { title: "ii ➔ V ➔ I (Padrão Jazz/Pop)", chords: ["F#m7", "B7", "E2"] },
+      { title: "IV ➔ iv ➔ I (Plagal Menor Emocional)", chords: ["A", "Am", "E2"] },
+      { title: "bVI ➔ bVII ➔ I (Épica / Lady Gaga)", chords: ["C", "D", "E2"] },
+      { title: "IV/V ➔ V7 ➔ I (Gospel / Soul)", chords: ["A/B", "B7", "E2"] },
+      { title: "bVII ➔ IV ➔ I (Backdoor / Rock)", chords: ["D", "A", "E2"] }
     ]
   },
   "F": {
     standard: ["F2", "C2", "Dm7", "Bb"],
     inverted: ["Bb", "C2", "Dm7", "Am7"],
     cadences: [
-      { title: "Cadência Autêntica (V ➔ I)", chords: ["Gm7", "C7", "F2"] },
-      { title: "Cadência Plagal (IV ➔ I)", chords: ["Bb", "Bbm6", "F2"] },
-      { title: "Cadência Suspensa", chords: ["Bb", "Csus4", "F2"] }
+      { title: "ii ➔ V ➔ I (Padrão Jazz/Pop)", chords: ["Gm7", "C7", "F2"] },
+      { title: "IV ➔ iv ➔ I (Plagal Menor Emocional)", chords: ["Bb", "Bbm", "F2"] },
+      { title: "bVI ➔ bVII ➔ I (Épica / Lady Gaga)", chords: ["Db", "Eb", "F2"] },
+      { title: "IV/V ➔ V7 ➔ I (Gospel / Soul)", chords: ["Bb/C", "C7", "F2"] },
+      { title: "bVII ➔ IV ➔ I (Backdoor / Rock)", chords: ["Eb", "Bb", "F2"] }
     ]
   },
   "F#": {
     standard: ["F#2", "C#2", "D#m7", "B"],
     inverted: ["B", "C#2", "D#m7", "A#m7"],
     cadences: [
-      { title: "Cadência Autêntica (V ➔ I)", chords: ["G#m7", "C#7", "F#2"] },
-      { title: "Cadência Plagal (IV ➔ I)", chords: ["B", "Bm6", "F#2"] },
-      { title: "Cadência Suspensa", chords: ["B", "C#sus4", "F#2"] }
+      { title: "ii ➔ V ➔ I (Padrão)", chords: ["G#m7", "C#7", "F#2"] },
+      { title: "IV ➔ iv ➔ I (Plagal Menor)", chords: ["B", "Bm", "F#2"] },
+      { title: "bVI ➔ bVII ➔ I (Épica)", chords: ["D", "E", "F#2"] },
+      { title: "IV/V ➔ V7 ➔ I (Gospel)", chords: ["B/C#", "C#7", "F#2"] },
+      { title: "bVII ➔ IV ➔ I (Backdoor)", chords: ["E", "B", "F#2"] }
     ]
   },
   "G": {
     standard: ["G2", "D2", "Em7", "C"],
     inverted: ["C", "D2", "Em7", "Bm7"],
     cadences: [
-      { title: "Cadência Autêntica (V ➔ I)", chords: ["Am7", "D7", "G2"] },
-      { title: "Cadência Plagal (IV ➔ I)", chords: ["C", "Cm6", "G2"] },
-      { title: "Cadência Suspensa", chords: ["C", "Dsus4", "G2"] }
+      { title: "ii ➔ V ➔ I (Padrão Jazz/Pop)", chords: ["Am7", "D7", "G2"] },
+      { title: "IV ➔ iv ➔ I (Plagal Menor Emocional)", chords: ["C", "Cm", "G2"] },
+      { title: "bVI ➔ bVII ➔ I (Épica / Lady Gaga)", chords: ["Eb", "F", "G2"] },
+      { title: "IV/V ➔ V7 ➔ I (Gospel / Soul)", chords: ["C/D", "D7", "G2"] },
+      { title: "bVII ➔ IV ➔ I (Backdoor / Rock)", chords: ["F", "C", "G2"] }
     ]
   },
   "G#": {
     standard: ["G#2", "D#2", "Fm7", "C#"],
     inverted: ["C#", "D#2", "Fm7", "Cm7"],
     cadences: [
-      { title: "Cadência Autêntica (V ➔ I)", chords: ["A#m7", "D#7", "G#2"] },
-      { title: "Cadência Plagal (IV ➔ I)", chords: ["C#", "C#m6", "G#2"] },
-      { title: "Cadência Suspensa", chords: ["C#", "D#sus4", "G#2"] }
+      { title: "ii ➔ V ➔ I (Padrão)", chords: ["A#m7", "D#7", "G#2"] },
+      { title: "IV ➔ iv ➔ I (Plagal Menor)", chords: ["C#", "C#m", "G#2"] },
+      { title: "bVI ➔ bVII ➔ I (Épica)", chords: ["E", "F#", "G#2"] },
+      { title: "IV/V ➔ V7 ➔ I (Gospel)", chords: ["C#/D#", "D#7", "G#2"] },
+      { title: "bVII ➔ IV ➔ I (Backdoor)", chords: ["F#", "C#", "G#2"] }
     ]
   },
   "A": {
     standard: ["A2", "E2", "F#m7", "D"],
     inverted: ["D", "E2", "F#m7", "C#m7"],
     cadences: [
-      { title: "Cadência Autêntica (V ➔ I)", chords: ["Bm7", "E7", "A2"] },
-      { title: "Cadência Plagal (IV ➔ I)", chords: ["D", "Dm6", "A2"] },
-      { title: "Cadência Suspensa", chords: ["D", "Esus4", "A2"] }
+      { title: "ii ➔ V ➔ I (Padrão Jazz/Pop)", chords: ["Bm7", "E7", "A2"] },
+      { title: "IV ➔ iv ➔ I (Plagal Menor Emocional)", chords: ["D", "Dm", "A2"] },
+      { title: "bVI ➔ bVII ➔ I (Épica / Lady Gaga)", chords: ["F", "G", "A2"] },
+      { title: "IV/V ➔ V7 ➔ I (Gospel / Soul)", chords: ["D/E", "E7", "A2"] },
+      { title: "bVII ➔ IV ➔ I (Backdoor / Rock)", chords: ["G", "D", "A2"] }
     ]
   },
   "A#": {
     standard: ["A#2", "F2", "Gm7", "D#"],
     inverted: ["D#", "F2", "Gm7", "Dm7"],
     cadences: [
-      { title: "Cadência Autêntica (V ➔ I)", chords: ["Cm7", "F7", "A#2"] },
-      { title: "Cadência Plagal (IV ➔ I)", chords: ["D#", "D#m6", "A#2"] },
-      { title: "Cadência Suspensa", chords: ["D#", "Fsus4", "A#2"] }
+      { title: "ii ➔ V ➔ I (Padrão)", chords: ["Cm7", "F7", "A#2"] },
+      { title: "IV ➔ iv ➔ I (Plagal Menor)", chords: ["D#", "D#m", "A#2"] },
+      { title: "bVI ➔ bVII ➔ I (Épica)", chords: ["F#", "G#", "A#2"] },
+      { title: "IV/V ➔ V7 ➔ I (Gospel)", chords: ["D#/F", "F7", "A#2"] },
+      { title: "bVII ➔ IV ➔ I (Backdoor)", chords: ["G#", "D#", "A#2"] }
     ]
   },
   "B": {
     standard: ["B2", "F#2", "G#m7", "E"],
     inverted: ["E", "F#2", "G#m7", "D#m7"],
     cadences: [
-      { title: "Cadência Autêntica (V ➔ I)", chords: ["C#m7", "F#7", "B2"] },
-      { title: "Cadência Plagal (IV ➔ I)", chords: ["E", "Em6", "B2"] },
-      { title: "Cadência Suspensa", chords: ["E", "F#sus4", "B2"] }
+      { title: "ii ➔ V ➔ I (Padrão Jazz/Pop)", chords: ["C#m7", "F#7", "B2"] },
+      { title: "IV ➔ iv ➔ I (Plagal Menor Emocional)", chords: ["E", "Em", "B2"] },
+      { title: "bVI ➔ bVII ➔ I (Épica / Lady Gaga)", chords: ["G", "A", "B2"] },
+      { title: "IV/V ➔ V7 ➔ I (Gospel / Soul)", chords: ["E/F#", "F#7", "B2"] },
+      { title: "bVII ➔ IV ➔ I (Backdoor / Rock)", chords: ["A", "E", "B2"] }
     ]
   },
 
@@ -134,108 +157,120 @@ const WORSHIP_PROGRESSIONS: { [key: string]: KeyProgression } = {
     standard: ["Cm7", "Eb2", "Bb2", "Ab"],
     inverted: ["Ab", "Bb2", "Cm7", "Gm7"],
     cadences: [
-      { title: "Cadência Autêntica (V ➔ i)", chords: ["Fm7", "G7", "Cm7"] },
-      { title: "Cadência Plagal (iv ➔ i)", chords: ["Fm7", "Cm7"] },
-      { title: "Cadência Triste (bVI ➔ V ➔ i)", chords: ["Ab", "G7", "Cm7"] }
+      { title: "ii° ➔ V7 ➔ i (Clássica / Jazz)", chords: ["Ddim", "G7", "Cm7"] },
+      { title: "iv ➔ V7 ➔ i (Menor Emocional)", chords: ["Fm7", "G7", "Cm7"] },
+      { title: "bVI ➔ bVII ➔ i (Épica Menor)", chords: ["Ab", "Bb", "Cm7"] },
+      { title: "iv ➔ i (Plagal Menor)", chords: ["Fm7", "Cm7"] }
     ]
   },
   "C#m": {
     standard: ["C#m7", "E2", "B2", "A"],
     inverted: ["A", "B2", "C#m7", "G#m7"],
     cadences: [
-      { title: "Cadência Autêntica (V ➔ i)", chords: ["F#m7", "G#7", "C#m7"] },
-      { title: "Cadência Plagal (iv ➔ i)", chords: ["F#m7", "C#m7"] },
-      { title: "Cadência Triste (bVI ➔ V ➔ i)", chords: ["A", "G#7", "C#m7"] }
+      { title: "ii° ➔ V7 ➔ i (Clássica / Jazz)", chords: ["D#dim", "G#7", "C#m7"] },
+      { title: "iv ➔ V7 ➔ i (Menor Emocional)", chords: ["F#m7", "G#7", "C#m7"] },
+      { title: "bVI ➔ bVII ➔ i (Épica Menor)", chords: ["A", "B", "C#m7"] },
+      { title: "iv ➔ i (Plagal Menor)", chords: ["F#m7", "C#m7"] }
     ]
   },
   "Dm": {
     standard: ["Dm7", "F2", "C2", "Bb"],
     inverted: ["Bb", "C2", "Dm7", "Am7"],
     cadences: [
-      { title: "Cadência Autêntica (V ➔ i)", chords: ["Gm7", "A7", "Dm7"] },
-      { title: "Cadência Plagal (iv ➔ i)", chords: ["Gm7", "Dm7"] },
-      { title: "Cadência Triste (bVI ➔ V ➔ i)", chords: ["Bb", "A7", "Dm7"] }
+      { title: "ii° ➔ V7 ➔ i (Clássica / Jazz)", chords: ["Edim", "A7", "Dm7"] },
+      { title: "iv ➔ V7 ➔ i (Menor Emocional)", chords: ["Gm7", "A7", "Dm7"] },
+      { title: "bVI ➔ bVII ➔ i (Épica Menor)", chords: ["Bb", "C", "Dm7"] },
+      { title: "iv ➔ i (Plagal Menor)", chords: ["Gm7", "Dm7"] }
     ]
   },
   "D#m": {
     standard: ["D#m7", "F#2", "C#2", "B"],
     inverted: ["B", "C#2", "D#m7", "A#m7"],
     cadences: [
-      { title: "Cadência Autêntica (V ➔ i)", chords: ["G#m7", "A#7", "D#m7"] },
-      { title: "Cadência Plagal (iv ➔ i)", chords: ["G#m7", "D#m7"] },
-      { title: "Cadência Triste (bVI ➔ V ➔ i)", chords: ["B", "A#7", "D#m7"] }
+      { title: "ii° ➔ V7 ➔ i (Clássica / Jazz)", chords: ["E#dim", "A#7", "D#m7"] },
+      { title: "iv ➔ V7 ➔ i (Menor Emocional)", chords: ["G#m7", "A#7", "D#m7"] },
+      { title: "bVI ➔ bVII ➔ i (Épica Menor)", chords: ["B", "C#", "D#m7"] },
+      { title: "iv ➔ i (Plagal Menor)", chords: ["G#m7", "D#m7"] }
     ]
   },
   "Em": {
     standard: ["Em7", "G2", "D2", "C"],
     inverted: ["C", "D2", "Em7", "Bm7"],
     cadences: [
-      { title: "Cadência Autêntica (V ➔ i)", chords: ["Am7", "B7", "Em7"] },
-      { title: "Cadência Plagal (iv ➔ i)", chords: ["Am7", "Em7"] },
-      { title: "Cadência Triste (bVI ➔ V ➔ i)", chords: ["C", "B7", "Em7"] }
+      { title: "ii° ➔ V7 ➔ i (Clássica / Jazz)", chords: ["F#dim", "B7", "Em7"] },
+      { title: "iv ➔ V7 ➔ i (Menor Emocional)", chords: ["Am7", "B7", "Em7"] },
+      { title: "bVI ➔ bVII ➔ i (Épica Menor)", chords: ["C", "D", "Em7"] },
+      { title: "iv ➔ i (Plagal Menor)", chords: ["Am7", "Em7"] }
     ]
   },
   "Fm": {
     standard: ["Fm7", "Ab2", "Eb2", "Db"],
     inverted: ["Db", "Eb2", "Fm7", "Cm7"],
     cadences: [
-      { title: "Cadência Autêntica (V ➔ i)", chords: ["Bbm7", "C7", "Fm7"] },
-      { title: "Cadência Plagal (iv ➔ i)", chords: ["Bbm7", "Fm7"] },
-      { title: "Cadência Triste (bVI ➔ V ➔ i)", chords: ["Db", "C7", "Fm7"] }
+      { title: "ii° ➔ V7 ➔ i (Clássica / Jazz)", chords: ["Gdim", "C7", "Fm7"] },
+      { title: "iv ➔ V7 ➔ i (Menor Emocional)", chords: ["Bbm7", "C7", "Fm7"] },
+      { title: "bVI ➔ bVII ➔ i (Épica Menor)", chords: ["Db", "Eb", "Fm7"] },
+      { title: "iv ➔ i (Plagal Menor)", chords: ["Bbm7", "Fm7"] }
     ]
   },
   "F#m": {
     standard: ["F#m7", "A2", "E2", "D"],
     inverted: ["D", "E2", "F#m7", "C#m7"],
     cadences: [
-      { title: "Cadência Autêntica (V ➔ i)", chords: ["Bm7", "C#7", "F#m7"] },
-      { title: "Cadência Plagal (iv ➔ i)", chords: ["Bm7", "F#m7"] },
-      { title: "Cadência Triste (bVI ➔ V ➔ i)", chords: ["D", "C#7", "F#m7"] }
+      { title: "ii° ➔ V7 ➔ i (Clássica / Jazz)", chords: ["G#dim", "C#7", "F#m7"] },
+      { title: "iv ➔ V7 ➔ i (Menor Emocional)", chords: ["Bm7", "C#7", "F#m7"] },
+      { title: "bVI ➔ bVII ➔ i (Épica Menor)", chords: ["D", "E", "F#m7"] },
+      { title: "iv ➔ i (Plagal Menor)", chords: ["Bm7", "F#m7"] }
     ]
   },
   "Gm": {
     standard: ["Gm7", "Bb2", "F2", "Eb"],
     inverted: ["Eb", "F2", "Gm7", "Dm7"],
     cadences: [
-      { title: "Cadência Autêntica (V ➔ i)", chords: ["Cm7", "D7", "Gm7"] },
-      { title: "Cadência Plagal (iv ➔ i)", chords: ["Cm7", "Gm7"] },
-      { title: "Cadência Triste (bVI ➔ V ➔ i)", chords: ["Eb", "D7", "Gm7"] }
+      { title: "ii° ➔ V7 ➔ i (Clássica / Jazz)", chords: ["Adim", "D7", "Gm7"] },
+      { title: "iv ➔ V7 ➔ i (Menor Emocional)", chords: ["Cm7", "D7", "Gm7"] },
+      { title: "bVI ➔ bVII ➔ i (Épica Menor)", chords: ["Eb", "F", "Gm7"] },
+      { title: "iv ➔ i (Plagal Menor)", chords: ["Cm7", "Gm7"] }
     ]
   },
   "G#m": {
     standard: ["G#m7", "B2", "F#2", "E"],
     inverted: ["E", "F#2", "G#m7", "D#m7"],
     cadences: [
-      { title: "Cadência Autêntica (V ➔ i)", chords: ["C#m7", "D#7", "G#m7"] },
-      { title: "Cadência Plagal (iv ➔ i)", chords: ["C#m7", "G#m7"] },
-      { title: "Cadência Triste (bVI ➔ V ➔ i)", chords: ["E", "D#7", "G#m7"] }
+      { title: "ii° ➔ V7 ➔ i (Clássica / Jazz)", chords: ["A#dim", "D#7", "G#m7"] },
+      { title: "iv ➔ V7 ➔ i (Menor Emocional)", chords: ["C#m7", "D#7", "G#m7"] },
+      { title: "bVI ➔ bVII ➔ i (Épica Menor)", chords: ["E", "F#", "G#m7"] },
+      { title: "iv ➔ i (Plagal Menor)", chords: ["C#m7", "G#m7"] }
     ]
   },
   "Am": {
     standard: ["Am7", "C2", "G2", "F"],
     inverted: ["F", "G2", "Am7", "Em7"],
     cadences: [
-      { title: "Cadência Autêntica (V ➔ i)", chords: ["Dm7", "E7", "Am7"] },
-      { title: "Cadência Plagal (iv ➔ i)", chords: ["Dm7", "Am7"] },
-      { title: "Cadência Triste (bVI ➔ V ➔ i)", chords: ["F", "E7", "Am7"] }
+      { title: "ii° ➔ V7 ➔ i (Clássica / Jazz)", chords: ["Bdim", "E7", "Am7"] },
+      { title: "iv ➔ V7 ➔ i (Menor Emocional)", chords: ["Dm7", "E7", "Am7"] },
+      { title: "bVI ➔ bVII ➔ i (Épica Menor)", chords: ["F", "G", "Am7"] },
+      { title: "iv ➔ i (Plagal Menor)", chords: ["Dm7", "Am7"] }
     ]
   },
   "A#m": {
     standard: ["A#m7", "C#2", "G#2", "F#"],
     inverted: ["F#", "G#2", "A#m7", "E#m7"],
     cadences: [
-      { title: "Cadência Autêntica (V ➔ i)", chords: ["D#m7", "F7", "A#m7"] },
-      { title: "Cadência Plagal (iv ➔ i)", chords: ["D#m7", "A#m7"] },
-      { title: "Cadência Triste (bVI ➔ V ➔ i)", chords: ["F#", "F7", "A#m7"] }
+      { title: "ii° ➔ V7 ➔ i (Clássica / Jazz)", chords: ["Bdim", "F7", "A#m7"] },
+      { title: "iv ➔ V7 ➔ i (Menor Emocional)", chords: ["D#m7", "F7", "A#m7"] },
+      { title: "bVI ➔ bVII ➔ i (Épica Menor)", chords: ["F#", "G#", "A#m7"] },
+      { title: "iv ➔ i (Plagal Menor)", chords: ["D#m7", "A#m7"] }
     ]
   },
   "Bm": {
     standard: ["Bm7", "D2", "A2", "G"],
     inverted: ["G", "A2", "Bm7", "F#m7"], // BATE COM O DOIS EXATAMENTE!
     cadences: [
-      { title: "Cadência Autêntica (V ➔ i)", chords: ["Em7", "F#7", "Bm7"] },
-      { title: "Cadência Plagal (iv ➔ i)", chords: ["Em7", "Bm7"] },
-      { title: "Cadência Triste (bVI ➔ V ➔ i)", chords: ["G", "F#7", "Bm7"] }
+      { title: "ii° ➔ V7 ➔ i (Clássica / Jazz)", chords: ["C#dim", "F#7", "Bm7"] },
+      { title: "iv ➔ V7 ➔ i (Menor Emocional)", chords: ["Em7", "F#7", "Bm7"] },
+      { title: "bVI ➔ bVII ➔ i (Épica Menor)", chords: ["G", "A", "Bm7"] },
+      { title: "iv ➔ i (Plagal Menor)", chords: ["Em7", "Bm7"] }
     ]
   }
 };
@@ -336,34 +371,6 @@ export default function Home() {
       audioEngineInstance.stopStream();
     };
   }, []);
-
-  const getTranslatedNote = (noteName: string) => {
-    return PT_NOTES[noteName] || noteName;
-  };
-
-  const getTranslatedChord = (chordName: string): string => {
-    let pt = chordName;
-    const replacements = [
-      { en: "C#", pt: "Dó#" },
-      { en: "C", pt: "Dó" },
-      { en: "D#", pt: "Ré#" },
-      { en: "D", pt: "Ré" },
-      { en: "F#", pt: "Fá#" },
-      { en: "F", pt: "Fá" },
-      { en: "G#", pt: "Sol#" },
-      { en: "G", pt: "Sol" },
-      { en: "A#", pt: "Lá#" },
-      { en: "A", pt: "Lá" },
-      { en: "B", pt: "Si" },
-      { en: "E", pt: "Mi" }
-    ];
-    replacements.forEach(r => {
-      if (pt.startsWith(r.en)) {
-        pt = pt.replace(r.en, r.pt);
-      }
-    });
-    return pt;
-  };
 
   // Iniciar captação do microfone e gravar a frase
   const startRecordingPhrase = async () => {
@@ -475,6 +482,12 @@ export default function Home() {
     setProgress(0);
   };
 
+  // Retorna a cifra correspondente ao Tom para exibição
+  const getScaleHeroCifra = (scale: Scale) => {
+    const noteName = scale.name.includes("Maior") ? scale.name.replace(" Maior", "") : scale.name.replace(" Menor", "");
+    return scale.type === "minor" ? `${noteName}m` : noteName;
+  };
+
   return (
     <div className="phone-viewport py-8 px-4 flex flex-col gap-4">
       {/* BRAND HEADER */}
@@ -564,11 +577,11 @@ export default function Home() {
           <div className="bg-orange-50 border border-orange-100 rounded-2xl py-4 px-4 text-center">
             <span className="text-[10px] uppercase font-bold text-orange-700 tracking-wider">Tom de Acompanhamento</span>
             <div className="text-3xl font-black text-orange-950 mt-1">
-              {estimatedScale.name.replace("Major", "Maior").replace("Minor", "Menor")}
+              {getScaleHeroCifra(estimatedScale)} ({estimatedScale.type === "minor" ? "Menor" : "Maior"})
             </div>
           </div>
 
-          {/* Notas da Voz */}
+          {/* Notas da Voz em Cifra Pura */}
           <div className="flex flex-col gap-2">
             <span className="text-[10px] text-[var(--text-secondary)] font-bold uppercase tracking-wider">
               Notas Cantadas (Melodia)
@@ -582,7 +595,7 @@ export default function Home() {
                     key={idx} 
                     className="px-2.5 py-1 bg-zinc-50 border border-zinc-200 rounded-lg text-xs font-bold text-zinc-800"
                   >
-                    {getTranslatedNote(NOTE_STRINGS[n])}
+                    {NOTE_STRINGS[n]}
                   </span>
                 ))
               )}
@@ -604,9 +617,8 @@ export default function Home() {
                   key={idx} 
                   className="bg-zinc-50 border border-zinc-200 rounded-xl py-3 px-1 text-center shadow-sm flex flex-col items-center justify-center"
                 >
-                  {/* Huge bold orange chord name exactly like your prints! */}
                   <span className="text-lg font-black text-[#ff6600] tracking-tight leading-none">
-                    {getTranslatedChord(chord)}
+                    {chord}
                   </span>
                 </div>
               ))}
@@ -631,9 +643,8 @@ export default function Home() {
                   key={idx} 
                   className="bg-orange-50/50 border border-orange-100 rounded-xl py-3 px-1 text-center shadow-sm flex flex-col items-center justify-center"
                 >
-                  {/* Inverted progression styled beautifully */}
                   <span className="text-lg font-black text-[#ff6600] tracking-tight leading-none">
-                    {getTranslatedChord(chord)}
+                    {chord}
                   </span>
                 </div>
               ))}
@@ -665,7 +676,7 @@ export default function Home() {
                     {cad.chords.map((ch, chIdx) => (
                       <React.Fragment key={chIdx}>
                         <span className="font-extrabold text-[#ff6600] text-sm">
-                          {getTranslatedChord(ch)}
+                          {ch}
                         </span>
                         {chIdx < cad.chords.length - 1 && (
                           <span className="text-zinc-400 text-xs font-semibold">➔</span>
@@ -694,7 +705,7 @@ export default function Home() {
       <footer className="flex gap-1.5 items-start p-3 bg-white border border-[var(--border-light)] rounded-xl text-[10px] text-[var(--text-secondary)] leading-relaxed">
         <Info size={12} className="text-[#ff6600] flex-shrink-0 mt-0.5" />
         <span>
-          Visualizador de Cifras de Ensaio. Exibe as progressões padrão em cifra (`D2`, `Bm7`, etc.), as pontes invertidas onde a música muda, e as cadências ideais para finalizar os louvores no ensaio com sua banda.
+          Visualizador de Cifras de Ensaio. Exibe as progressões padrão em cifra pura (`D2`, `Bm7`, etc.), as pontes invertidas onde a música muda, e as cadências ideais para finalizar os louvores no ensaio com sua banda.
         </span>
       </footer>
     </div>
