@@ -116,7 +116,7 @@ export class MusicAIEngine {
   estimateKey(): Scale {
     this.cleanHistory();
     if (this.noteHistory.length === 0) {
-      // Padrão: Dó Maior
+      // Padrão: C Maior
       return SCALES[0];
     }
 
@@ -127,19 +127,40 @@ export class MusicAIEngine {
     });
 
     let bestScale = SCALES[0];
-    let maxScore = -1;
+    let maxScore = -999999;
 
-    // Pontuar cada uma das 24 escalas
+    // Perfis de peso musical (Krumhansl-Schmuckler adaptados)
+    // Tonic = 1.0, Terça = 0.9, Quinta = 0.8, outras notas diatônicas = 0.5, fora da escala = -0.8
     SCALES.forEach((scale) => {
       let score = 0;
+      const root = scale.root;
+      
+      // Definir pesos para cada semitom relativo à tônica da escala
+      const weights = Array(12).fill(-0.8); // Penalidade pesada padrão para notas fora da escala
+      
+      if (scale.type === "major") {
+        weights[0] = 1.0;  // Tônica (I)
+        weights[2] = 0.5;  // Segunda Maior (ii)
+        weights[4] = 0.9;  // Terça Maior (iii)
+        weights[5] = 0.5;  // Quarta Justa (IV)
+        weights[7] = 0.8;  // Quinta Justa (V)
+        weights[9] = 0.5;  // Sexta Maior (vi)
+        weights[11] = 0.4; // Sétima Maior (vii)
+      } else {
+        weights[0] = 1.0;  // Tônica (i)
+        weights[2] = 0.5;  // Segunda Maior (ii)
+        weights[3] = 0.9;  // Terça Menor (iii)
+        weights[5] = 0.5;  // Quarta Justa (iv)
+        weights[7] = 0.8;  // Quinta Justa (v)
+        weights[8] = 0.4;  // Sexta Menor (VI)
+        weights[10] = 0.5; // Sétima Menor (VII)
+      }
+
+      // Calcular a pontuação da escala aplicando os pesos sobre as contagens de notas capturadas
       for (let i = 0; i < 12; i++) {
-        if (scale.notes.has(i)) {
-          // Nota pertence à escala: ganha pontos proporcionais à frequência que foi tocada
-          score += counts[i];
-        } else {
-          // Nota fora da escala: penaliza levemente se tocada
-          score -= counts[i] * 0.5;
-        }
+        const relativeSemitone = (i - root + 12) % 12;
+        const weight = weights[relativeSemitone];
+        score += counts[i] * weight;
       }
 
       if (score > maxScore) {

@@ -443,6 +443,7 @@ export default function Home() {
   const rawNoteBufferRef = useRef<number[]>([]);
   const lastStableNoteRef = useRef<number>(-1);
   const loopRef = useRef<number | null>(null);
+  const notesAccumulatedRef = useRef<number[]>([]);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawAnimationRef = useRef<number | null>(null);
 
@@ -574,7 +575,7 @@ export default function Home() {
       musicAIInstance.resetHistory();
       rawNoteBufferRef.current = [];
       lastStableNoteRef.current = -1;
-      const notesAccumulated: number[] = [];
+      notesAccumulatedRef.current = [];
       setCapturedNotesList([]);
 
       if (recognitionRef.current) {
@@ -585,9 +586,9 @@ export default function Home() {
         }
       }
 
-      startAnalysisThread(notesAccumulated);
+      startAnalysisThread();
 
-      const duration = 6000;
+      const duration = 30000; // Máximo 30 segundos!
       const interval = 100;
       let elapsed = 0;
 
@@ -599,21 +600,7 @@ export default function Home() {
         setProgress(pct);
 
         if (elapsed >= duration) {
-          if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
-          
-          audioEngineInstance.stopStream();
-          if (loopRef.current) cancelAnimationFrame(loopRef.current);
-          setAnalyser(null);
-          setIsListening(false);
-          setPitchData(null);
-
-          if (recognitionRef.current) {
-            try { recognitionRef.current.stop(); } catch (e) {}
-          }
-
-          setTimeout(() => {
-            processTheoryResults(notesAccumulated);
-          }, 300);
+          stopRecordingAndAnalyze();
         }
       }, interval);
 
@@ -623,7 +610,25 @@ export default function Home() {
     }
   };
 
-  const startAnalysisThread = (accumulator: number[]) => {
+  const stopRecordingAndAnalyze = () => {
+    if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+    
+    audioEngineInstance.stopStream();
+    if (loopRef.current) cancelAnimationFrame(loopRef.current);
+    setAnalyser(null);
+    setIsListening(false);
+    setPitchData(null);
+
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch (e) {}
+    }
+
+    setTimeout(() => {
+      processTheoryResults(notesAccumulatedRef.current);
+    }, 300);
+  };
+
+  const startAnalysisThread = () => {
     const analyze = () => {
       const data = audioEngineInstance.detectPitch(0.015);
       
@@ -639,7 +644,7 @@ export default function Home() {
         if (allSame && data.noteIndex !== lastStableNoteRef.current) {
           lastStableNoteRef.current = data.noteIndex;
           
-          accumulator.push(data.noteIndex);
+          notesAccumulatedRef.current.push(data.noteIndex);
           musicAIInstance.addNoteToHistory(data.noteIndex);
         }
       }
@@ -986,8 +991,8 @@ export default function Home() {
 
               <div className="flex flex-col gap-2 text-left">
                 <div className="flex justify-between text-[11px] text-[var(--text-muted)] font-semibold uppercase tracking-wider">
-                  <span>Gravando Áudio e Letra</span>
-                  <span>{(6 - (progress * 6) / 100).toFixed(1)}s</span>
+                  <span>Gravando Áudio e Letra (Até 30s)</span>
+                  <span>{(30 - (progress * 30) / 100).toFixed(1)}s</span>
                 </div>
                 <div className="progress-container">
                   <div className="progress-bar bg-[#ff6600]" style={{ width: `${progress}%` }} />
@@ -995,10 +1000,17 @@ export default function Home() {
               </div>
 
               <button
-                onClick={resetAll}
-                className="btn-minimal btn-outline text-xs py-3 rounded-xl border border-zinc-200"
+                onClick={stopRecordingAndAnalyze}
+                className="btn-minimal shadow-[0_4px_25px_rgba(239,68,68,0.15)] py-4 text-base bg-red-600 hover:bg-red-700 text-white rounded-2xl flex items-center justify-center gap-2 animate-[pulse_2.2s_infinite]"
               >
-                Cancelar
+                🛑 Parar e Analisar Cifra
+              </button>
+
+              <button
+                onClick={resetAll}
+                className="text-[10px] font-bold text-zinc-400 hover:text-zinc-600 transition-colors uppercase tracking-wider py-1"
+              >
+                Descartar Gravação
               </button>
             </div>
           )}
