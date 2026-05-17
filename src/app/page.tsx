@@ -289,6 +289,33 @@ interface LocalSong {
 // Banco de dados interno de louvores integrados e offline-ready
 const LOCAL_SONGS_DATABASE: LocalSong[] = [
   {
+    id: "eu_nao_posso_ficar_de_pe",
+    title: "Eu Não Posso Ficar de Pé",
+    artist: "David M. Quinlan",
+    originalKey: "G#m",
+    keywords: ["não", "posso", "ficar", "pé", "diante", "tua", "glória", "templo", "sacrifício", "altar", "queimar", "caia", "fogo", "céus", "israel"],
+    lyrics: `[G#m]Eu não posso [B]ficar de [F#]pé
+Diante da Tua [G#m]Gló[B]ria[F#]
+[G#m]Eu não posso [B]ficar de [F#]pé
+Diante da Tua [G#m]Gló[B]ria[F#]
+
+[Segunda Parte]
+[G#m]Sou teu templo, teu sa[E]crifício
+[B]O teu altar vem queimar [F#]em mim
+[G#m]Sou teu templo, teu sa[E]crifício
+[B]O teu altar vem queimar [F#]em mim
+
+[Interlúdio]
+[G#m] [B] [F#]
+[G#m] [B] [F#]
+
+[Refrão]
+[E]Caia fogo dos [B]céus
+          [G#m]Queime esse altar
+Mostra pra esse povo
+[F#]Que há Deus em Israel`
+  },
+  {
     id: "eu_e_minha_casa",
     title: "Eu e Minha Casa",
     artist: "Worship / Ministério de Louvor",
@@ -343,7 +370,6 @@ Em Ti meu [F]Senhor`
 function transposeChord(chord: string, semitones: number): string {
   if (semitones === 0) return chord;
   
-  // Extrair a nota fundamental e os acidentes (ex: C#, Bb, F#)
   let root = "";
   let rest = "";
   
@@ -357,7 +383,6 @@ function transposeChord(chord: string, semitones: number): string {
     return chord;
   }
 
-  // Normalizar bemóis para sustenidos
   const enharmonics: { [key: string]: string } = {
     "Db": "C#", "Eb": "D#", "Gb": "F#", "Ab": "G#", "Bb": "A#"
   };
@@ -367,7 +392,7 @@ function transposeChord(chord: string, semitones: number): string {
   }
 
   const idx = CHROMATIC_SCALE.indexOf(root);
-  if (idx === -1) return chord; // Se não encontrou a nota, retorna sem mexer
+  if (idx === -1) return chord;
 
   let newIdx = (idx + semitones) % 12;
   if (newIdx < 0) newIdx += 12;
@@ -375,7 +400,6 @@ function transposeChord(chord: string, semitones: number): string {
   return CHROMATIC_SCALE[newIdx] + rest;
 }
 
-// Interface da parte da letra com cifra
 interface LyricWordChunk {
   chord?: string;
   text: string;
@@ -429,7 +453,6 @@ export default function Home() {
       if (saved) {
         setOfflineSongs(JSON.parse(saved));
       } else {
-        // Inicializa com as músicas padrões locais se a biblioteca estiver vazia
         localStorage.setItem("louvor_ia_offline_library", JSON.stringify(LOCAL_SONGS_DATABASE));
         setOfflineSongs(LOCAL_SONGS_DATABASE);
       }
@@ -492,7 +515,7 @@ export default function Home() {
         analyser.getByteTimeDomainData(dataArray);
 
         ctx.lineWidth = 2;
-        ctx.strokeStyle = "#ff6600"; // Laranja quente
+        ctx.strokeStyle = "#ff6600";
         ctx.beginPath();
 
         const sliceWidth = canvas.width / bufferLength;
@@ -554,7 +577,6 @@ export default function Home() {
       const notesAccumulated: number[] = [];
       setCapturedNotesList([]);
 
-      // 1. Iniciar Speech Recognition (se disponível)
       if (recognitionRef.current) {
         try {
           recognitionRef.current.start();
@@ -563,10 +585,8 @@ export default function Home() {
         }
       }
 
-      // 2. Iniciar thread de escuta DSP de frequências
       startAnalysisThread(notesAccumulated);
 
-      // 3. Timer de captação de 6 segundos
       const duration = 6000;
       const interval = 100;
       let elapsed = 0;
@@ -591,7 +611,6 @@ export default function Home() {
             try { recognitionRef.current.stop(); } catch (e) {}
           }
 
-          // Executar análise teórica após um brevíssimo delay (para o speech finalizar)
           setTimeout(() => {
             processTheoryResults(notesAccumulated);
           }, 300);
@@ -604,7 +623,6 @@ export default function Home() {
     }
   };
 
-  // DSP thread acumulador de notas
   const startAnalysisThread = (accumulator: number[]) => {
     const analyze = () => {
       const data = audioEngineInstance.detectPitch(0.015);
@@ -632,29 +650,21 @@ export default function Home() {
     analyze();
   };
 
-  // Processa os resultados de Teoria Musical e busca progressões e cadências corretas
   const processTheoryResults = (notesSang: number[]) => {
-    // 1. Estimar o Tom diatônico
+    // 1. Estimar o Tom diatônico pela voz
     const scale = musicAIInstance.estimateKey();
-    setEstimatedScale(scale);
+    const noteName = scale.name.includes("Maior") ? scale.name.replace(" Maior", "") : scale.name.replace(" Menor", "");
+    const lookupKey = scale.type === "minor" ? `${noteName}m` : noteName;
 
     // 2. Filtrar notas únicas cantadas
     const uniqueNotes = Array.from(new Set(notesSang)).sort((a, b) => a - b);
     setCapturedNotesList(uniqueNotes);
 
-    // 3. Buscar no Banco de Cifras
-    const noteName = scale.name.includes("Maior") ? scale.name.replace(" Maior", "") : scale.name.replace(" Menor", "");
-    const lookupKey = scale.type === "minor" ? `${noteName}m` : noteName;
-    const progression = WORSHIP_PROGRESSIONS[lookupKey] || WORSHIP_PROGRESSIONS["C"];
-    setCurrentProgression(progression);
-
-    // 4. Mecanismo de Busca Inteligente PWA Offline
-    // Usamos o texto reconhecido pelo microfone (ou simulado se silencioso) para identificar se existe na biblioteca
+    // 3. Busca inteligente de louvor no banco de dados offline
     let matchedSong: LocalSong | null = null;
     const textToSearch = transcription.trim().toLowerCase();
 
     if (textToSearch.length > 2) {
-      // Pontua cada música baseada em palavras-chave que combinam com a voz
       let highestScore = 0;
       
       offlineSongs.forEach(song => {
@@ -672,33 +682,36 @@ export default function Home() {
       });
     }
 
-    // Se encontrou a música na biblioteca offline (ex: cantou "vida", "casa", "lar" -> casa), carrega ela inteira!
+    // 4. Carregar música correspondente ou criar improviso
     if (matchedSong) {
       setLoadedSong(matchedSong);
       
-      // Ajusta o Tom original da música carregada para o Tom que o usuário acabou de cantar!
-      // Isso calcula a diferença em semitons e ajusta em tempo real!
+      // FORÇA O TOM ORIGINAL DA PRÓPRIA MÚSICA CADASTROU! (ex: G#m para Eu Não Posso Ficar de Pé)
       const originalKey = (matchedSong as LocalSong).originalKey;
-      const targetKey = scale.type === "minor" ? `${noteName}m` : noteName;
+      const originalNoteName = originalKey.endsWith("m") ? originalKey.slice(0, -1) : originalKey;
+      const rootIndex = NOTE_STRINGS.indexOf(originalNoteName);
+      const notesSet = new Set<number>([rootIndex === -1 ? 0 : rootIndex]);
       
-      // Calcula a diferença de semitones para transpor a música automaticamente
-      const origBase = originalKey.endsWith("m") ? originalKey.slice(0, -1) : originalKey;
-      const targetBase = targetKey.endsWith("m") ? targetKey.slice(0, -1) : targetKey;
+      const songScale: Scale = {
+        name: originalKey.endsWith("m") ? `${originalNoteName} Menor` : `${originalNoteName} Maior`,
+        root: rootIndex === -1 ? 0 : rootIndex,
+        type: originalKey.endsWith("m") ? "minor" : "major",
+        notes: notesSet
+      };
+
+      setEstimatedScale(songScale);
       
-      const origIdx = CHROMATIC_SCALE.indexOf(origBase);
-      const targetIdx = CHROMATIC_SCALE.indexOf(targetBase);
-      
-      if (origIdx !== -1 && targetIdx !== -1) {
-        let delta = targetIdx - origIdx;
-        if (delta < -6) delta += 12;
-        if (delta > 6) delta -= 12;
-        setTransposeSemitones(delta);
-      }
+      const progression = WORSHIP_PROGRESSIONS[originalKey] || WORSHIP_PROGRESSIONS["C"];
+      setCurrentProgression(progression);
+      setTransposeSemitones(0); // Inicia exatamente no Tom original correto da cifra do ensaio!
     } else {
-      // Se não encontrou nenhuma correspondência, gera uma cifra improvisada dinâmica com o texto que a pessoa cantou!
+      // Cria improviso baseado no tom estimado pela voz
+      const progression = WORSHIP_PROGRESSIONS[lookupKey] || WORSHIP_PROGRESSIONS["C"];
+      setCurrentProgression(progression);
+      setEstimatedScale(scale);
+      setTransposeSemitones(0);
+
       const fallbackText = transcription.trim() || "Minha melodia de adoração e oração no ensaio";
-      
-      // Cria a cifra dinâmica distribuindo os acordes do tom detectado por cima da frase
       const chords = progression.standard;
       const words = fallbackText.split(" ");
       let lyricWithBrackets = "";
@@ -723,15 +736,12 @@ export default function Home() {
       setLoadedSong(tempSong);
     }
 
-    // 5. Mudar para a tela de resultados
     setStep("result");
   };
 
-  // Salvar a música transposta diretamente no Banco de Dados Offline do navegador
   const saveSongToOfflineLibrary = () => {
     if (!loadedSong) return;
 
-    // Se for uma música nova/improvisada ou transposta, a salvamos com a cifra transposta definitiva!
     const transposedLyrics = loadedSong.lyrics.split("\n").map(line => {
       const parts = parseCifraLine(line);
       return parts.map(part => {
@@ -753,7 +763,6 @@ export default function Home() {
       lyrics: transposedLyrics
     };
 
-    // Evita duplicatas se já existe na biblioteca
     const filtered = offlineSongs.filter(s => s.id !== loadedSong.id);
     const updated = [songToSave, ...filtered];
     
@@ -776,7 +785,6 @@ export default function Home() {
     setLoadedSong(song);
     setTransposeSemitones(0);
     
-    // Define progressão harmônica
     const key = song.originalKey;
     const noteName = key.endsWith("m") ? key.slice(0, -1) : key;
     const progression = WORSHIP_PROGRESSIONS[key] || WORSHIP_PROGRESSIONS["C"];
@@ -813,7 +821,11 @@ export default function Home() {
     setTranscription("");
   };
 
-  // Divide uma linha de letra cifra [D2]Meu Jesus [A2]Eu Te entrego em blocos visuais responsivos
+  const getScaleHeroCifra = (scale: Scale) => {
+    const noteName = scale.name.includes("Maior") ? scale.name.replace(" Maior", "") : scale.name.replace(" Menor", "");
+    return scale.type === "minor" ? `${noteName}m` : noteName;
+  };
+
   const parseCifraLine = (line: string): LyricWordChunk[] => {
     const chunks: LyricWordChunk[] = [];
     let currentIdx = 0;
@@ -825,7 +837,6 @@ export default function Home() {
           const chord = line.slice(currentIdx + 1, endBracketIdx);
           currentIdx = endBracketIdx + 1;
           
-          // Achar a próxima cifra ou o fim da linha
           const nextBracketIdx = line.indexOf("[", currentIdx);
           const text = nextBracketIdx !== -1 
             ? line.slice(currentIdx, nextBracketIdx) 
@@ -834,7 +845,6 @@ export default function Home() {
           chunks.push({ chord, text });
           currentIdx = nextBracketIdx !== -1 ? nextBracketIdx : line.length;
         } else {
-          // Bracket sem par correspondente
           chunks.push({ text: line.slice(currentIdx) });
           break;
         }
@@ -856,7 +866,6 @@ export default function Home() {
     return chunks;
   };
 
-  // Renderiza a folha de cifra com os acordes transpostos pairando em cima no tempo exato
   const renderTransposedCifra = (lyricsText: string) => {
     const lines = lyricsText.split("\n");
     return (
@@ -886,7 +895,6 @@ export default function Home() {
     );
   };
 
-  // Renderiza as cadências transpostas na tela
   const getTransposedCadences = (): CadenceOption[] => {
     if (!currentProgression) return [];
     return currentProgression.cadences.map(cad => ({
@@ -895,7 +903,6 @@ export default function Home() {
     }));
   };
 
-  // Transpor um tom completo em cifra para exibição de cabeçalho
   const getTransposedKeyHero = () => {
     if (!estimatedScale) return "";
     const noteName = estimatedScale.name.includes("Maior") ? estimatedScale.name.replace(" Maior", "") : estimatedScale.name.replace(" Menor", "");
@@ -903,7 +910,6 @@ export default function Home() {
     return transposeChord(lookupKey, transposeSemitones);
   };
 
-  // Filtragem de busca da biblioteca offline
   const filteredOfflineSongs = offlineSongs.filter(song => {
     const query = searchQuery.toLowerCase();
     return song.title.toLowerCase().includes(query) || 
@@ -943,11 +949,9 @@ export default function Home() {
         </div>
       </header>
 
-      {/* 2. CONTEÚDO PRINCIPAL DE ABAS */}
-
+      {/* ABA DA CAPTAÇÃO E RESULTADOS */}
       {activeTab === "ensaiar" && (
         <>
-          {/* TELA DE AGUARDANDO CAPTAÇÃO */}
           {step === "welcome" && (
             <div className="minimal-card flex flex-col gap-6 text-center animate-[slideIn_0.3s_ease] border-t-4 border-t-[#ff6600]">
               <div className="flex flex-col gap-2">
@@ -966,7 +970,6 @@ export default function Home() {
             </div>
           )}
 
-          {/* ESCUTANDO E ACUMULANDO NOTAS / VOZ */}
           {step === "listening" && (
             <div className="minimal-card flex flex-col gap-6 text-center animate-[slideIn_0.3s_ease] border-t-4 border-t-[#ff6600]">
               <div className="flex flex-col gap-1.5">
@@ -977,12 +980,10 @@ export default function Home() {
                 <h2 className="text-2xl font-extrabold tracking-tight">Cante a Frase Musical</h2>
               </div>
 
-              {/* Minimal visualizer */}
               <div className="minimal-wave-container bg-orange-50 border-orange-100 border">
                 <canvas ref={canvasRef} className="w-full h-full block" />
               </div>
 
-              {/* Progress bar loader */}
               <div className="flex flex-col gap-2 text-left">
                 <div className="flex justify-between text-[11px] text-[var(--text-muted)] font-semibold uppercase tracking-wider">
                   <span>Gravando Áudio e Letra</span>
@@ -1002,7 +1003,6 @@ export default function Home() {
             </div>
           )}
 
-          {/* EXIBIR RESULTADOS: CIFRA RESPONSIVA COM CHORDS ACIMA DA LETRA */}
           {step === "result" && estimatedScale && loadedSong && currentProgression && (
             <div className="minimal-card flex flex-col gap-6 animate-[slideIn_0.3s_ease] border-t-4 border-t-[#ff6600]">
               {/* Success Banner */}
@@ -1039,12 +1039,12 @@ export default function Home() {
                 )}
               </div>
 
-              {/* Seção de Controles de Transposição de Tom */}
+              {/* Tom de Acompanhamento */}
               <div className="flex items-center justify-between bg-orange-50 border border-orange-100 rounded-2xl py-3.5 px-4">
                 <div className="flex flex-col">
                   <span className="text-[10px] uppercase font-bold text-orange-700 tracking-wider">Tom de Execução</span>
                   <span className="text-2xl font-black text-orange-950 mt-0.5 leading-none">
-                    {getTransposedKeyHero()} ({estimatedScale.type === "minor" ? "Menor" : "Maior"})
+                    {getScaleHeroCifra(estimatedScale)} ({estimatedScale.type === "minor" ? "Menor" : "Maior"})
                   </span>
                 </div>
 
@@ -1143,7 +1143,6 @@ export default function Home() {
             </p>
           </div>
 
-          {/* Campo de pesquisa */}
           <div className="flex items-center gap-2 border border-zinc-200 p-2 rounded-xl bg-zinc-50">
             <Search size={16} className="text-zinc-400 ml-1" />
             <input
@@ -1155,7 +1154,6 @@ export default function Home() {
             />
           </div>
 
-          {/* Lista de músicas offline */}
           <div className="flex flex-col gap-2.5 max-h-[450px] overflow-y-auto">
             {filteredOfflineSongs.length === 0 ? (
               <div className="text-center py-8 text-xs text-zinc-400 italic">
