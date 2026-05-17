@@ -1,0 +1,18 @@
+{
+  "name": "Louvor Inteligente - Plataforma IA Musical",
+  "short_name": "Louvor IA",
+  "description": "Plataforma de IA musical em tempo real para igrejas - afinador, sugestão de acordes e memória musical progressiva offline.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0516",
+  "theme_color": "#6366f1",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ]
+}
